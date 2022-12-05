@@ -38,13 +38,16 @@ class Simulation:
         self.X = np.ones(self.N) * self.r_S
         self.i = 0
 
+    def sample(self, p: float) -> np.ndarray:
+        return np.random.choice(2, self.N, p=[p, 1-p]).astype(bool)
+
     def transition(self):
         self.i += 1
 
-        mask_A = np.random.choice(2, self.N, self.p_A)
-        mask_B = np.random.choice(2, self.N, self.p_B)
-        mask_C = np.random.choice(2, self.N, self.p_C)
-        mask_D = np.random.choice(2, self.N, self.p_D)
+        mask_A = self.sample(self.p_A)
+        mask_B = self.sample(self.p_B)
+        mask_C = self.sample(self.p_C)
+        mask_D = self.sample(self.p_D)
 
         # Exclude those that cannot afford it
         poor_A = self.X[mask_A] < self.c_A
