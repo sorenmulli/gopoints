@@ -36,3 +36,20 @@ class Simulation:
 
         # Everyone starts as new users with signup amount of points
         self.X = np.ones(self.N) * self.r_S
+        self.i = 0
+
+    def transition(self):
+        self.i += 1
+
+        mask_A = np.random.choice(2, self.N, self.p_A)
+        mask_B = np.random.choice(2, self.N, self.p_B)
+        mask_C = np.random.choice(2, self.N, self.p_C)
+        mask_D = np.random.choice(2, self.N, self.p_D)
+
+        # Exclude those that cannot afford it
+        poor_A = self.X[mask_A] < self.c_A
+        poor_B = self.X[mask_B] < self.c_B
+        mask_A = mask_A & ~poor_A
+        mask_B = mask_B & ~poor_B
+
+        # Do matching
