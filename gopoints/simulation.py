@@ -1,3 +1,4 @@
+from typing import Tuple
 import numpy as np
 
 
@@ -39,10 +40,29 @@ class Simulation:
         self.i = 0
 
     def sample(self, p: float) -> np.ndarray:
-        return np.random.choice(2, self.N, p=[p, 1-p]).astype(bool)
+        return np.random.choice(2, self.N, p=[1 - p, p]).astype(bool)
 
-    def transition(self):
-        self.i += 1
+    def do_matching(
+        self, requester: np.ndarray, giver: np.ndarray
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        diff = sum(giver) - sum(requester)
+        ignored_requester = np.zeros(self.N, dtype=bool)
+        ignored_giver = np.zeros(self.N, dtype=bool)
+        # Some requesters will be ignored
+        if diff < 0:
+            ignored_requester[
+                np.random.choice(np.where(requester)[0], abs(diff), replace=False)
+            ] = True
+            requester[ignored_requester] = False
+        # Some givers will be ignored
+        elif diff > 0:
+            ignored_giver[
+                np.random.choice(np.where(giver)[0], diff, replace=False)
+            ] = True
+            giver[ignored_giver] = False
+        return ignored_requester, ignored_giver
+
+    def step(self):
 
         mask_A = self.sample(self.p_A)
         mask_B = self.sample(self.p_B)
@@ -50,9 +70,25 @@ class Simulation:
         mask_D = self.sample(self.p_D)
 
         # Exclude those that cannot afford it
-        poor_A = self.X[mask_A] < self.c_A
-        poor_B = self.X[mask_B] < self.c_B
-        mask_A = mask_A & ~poor_A
-        mask_B = mask_B & ~poor_B
+        poor_A = self.X < self.c_A
+        poor_B = self.X < self.c_B
+        mask_A[poor_A] = False
+        mask_B[poor_B] = False
 
-        # Do matching
+        # Match conversation starts
+        ignored_A, ignored_C = self.do_matching(mask_A, mask_C)
+        # Match advice
+        ignored_B, ignored_D = self.do_matching(mask_B, mask_D)
+
+        assert mask_A.sum() == mask_C.sum(), self.i
+        assert mask_B.sum() == mask_D.sum(), self.i
+
+        self.i += 1
+
+
+if __name__ == "__main__":
+    # Test
+    s = Simulation(100, 1 / 20, 1 / 10, 1 / 40, 1 / 20, 10, 5, 2, 2, 1)
+    np.random.seed(0)
+    for _ in range(100):
+        s.step()
