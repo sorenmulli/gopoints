@@ -12,9 +12,11 @@ class Simulation:
         p_B: float,
         p_C: float,
         p_D: float,
+        p_F: float,
         r_S: int,
         r_A: int,
         r_B: int,
+        r_F: int,
         c_A: int,
         c_B: int,
     ):
@@ -27,17 +29,29 @@ class Simulation:
         self.p_B = p_B
         self.p_C = p_C
         self.p_D = p_D
+        self.p_F = p_F
 
         self.r_S = r_S
         self.r_A = r_A
         self.r_B = r_B
+        self.r_F = r_F
 
         self.c_A = c_A
         self.c_B = c_B
 
         # Everyone starts as new users with signup amount of points
-        self.X = np.ones(self.N) * self.r_S
+        self.X = np.ones(self.N, dtype=int) * self.r_S
         self.i = 0
+
+        self.pA = []
+        self.pB = []
+
+        self.iA = []
+        self.iB = []
+        self.iC = []
+        self.iD = []
+
+        self.x = []
 
     def sample(self, p: float) -> np.ndarray:
         return np.random.choice(2, self.N, p=[1 - p, p]).astype(bool)
@@ -63,7 +77,6 @@ class Simulation:
         return ignored_requester, ignored_giver
 
     def step(self):
-
         mask_A = self.sample(self.p_A)
         mask_B = self.sample(self.p_B)
         mask_C = self.sample(self.p_C)
@@ -80,15 +93,24 @@ class Simulation:
         # Match advice
         ignored_B, ignored_D = self.do_matching(mask_B, mask_D)
 
-        assert mask_A.sum() == mask_C.sum(), self.i
-        assert mask_B.sum() == mask_D.sum(), self.i
+        mask_F = self.sample(self.p_F) & mask_B
+
+        # Update points
+        self.X[mask_A] -= self.c_A
+        self.X[mask_B] -= self.c_B
+
+        self.X[mask_C] += self.r_A
+        self.X[mask_D] += self.r_B
+
+        self.X[mask_F] += self.r_F
+
+        # Save trajectory
+        self.pA.append(poor_A)
+        self.pB.append(poor_B)
+        self.iA.append(ignored_A)
+        self.iB.append(ignored_B)
+        self.iC.append(ignored_C)
+        self.iD.append(ignored_D)
+        self.x.append(self.X.copy())
 
         self.i += 1
-
-
-if __name__ == "__main__":
-    # Test
-    s = Simulation(100, 1 / 20, 1 / 10, 1 / 40, 1 / 20, 10, 5, 2, 2, 1)
-    np.random.seed(0)
-    for _ in range(100):
-        s.step()
